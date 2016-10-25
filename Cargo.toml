@@ -1,0 +1,8 @@
+[package]
+name = "message_verifier"
+version = "0.1.0"
+authors = ["Michael Coyne <mikeycgto@gmail.com>"]
+
+[dependencies]
+rustc-serialize = "^0.3"
+rust-crypto = "^0.2"
