@@ -12,6 +12,5 @@ encryptor = ActiveSupport::MessageEncryptor.new(salt, sign_salt, serializer: JSO
 
 message = { key: 'value' }
 
-puts "Base Key: #{key_base}"
-puts "Signed: #{verifier.generate(message)}"
-puts "Encrypted: #{encryptor.encrypt_and_sign(message)}"
+puts verifier.generate(message)
+puts encryptor.encrypt_and_sign(message)
