@@ -132,9 +132,6 @@ impl Encryptor {
             Ok(decoded) => {
                 match split_by_dashes_from_u8_slice(&decoded) {
                     Some((encoded_cipher_text, encoded_iv)) => {
-                        println!("{:?}", encoded_cipher_text);
-                        println!("{:?}", encoded_iv);
-
                         match (encoded_cipher_text.from_base64(), encoded_iv.from_base64()) {
                             (Ok(cipher_text), Ok(iv)) => {
                                 let key_sz = AesKeySize::KeySize256; // TODO make configurable
