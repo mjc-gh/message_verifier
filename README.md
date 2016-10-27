@@ -30,6 +30,6 @@ It can be run as so:
 This output can be piped to the Rust example to show how messages are
 verified and decrypted:
 
-    $ ruby examples/generate_encrypt.rb | cargo run --example
+    $ ruby examples/generate_encrypt.rb | cargo run --example verify_decrypt
     Verified Message: {"key":"value"}
     Decrypted Message: {"key":"value"}
