@@ -11,7 +11,7 @@ fn main() {
     let sign_salt = "test signed salt";
 
     let verifier = Verifier::new(key_base);
-    let encryptor = Encryptor::new(key_base, salt, sign_salt, 1000, 64);
+    let encryptor = Encryptor::new(key_base, salt, sign_salt, 1000, 64).unwrap();
 
     let mut input: Vec<String> = vec![];
     let mut buffer = String::new();
