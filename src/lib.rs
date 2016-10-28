@@ -26,7 +26,7 @@ pub enum VerifierError {
     DecodePayload
 }
 
-pub fn create_derived_keys(secret: &str, salts: &Vec<&str>, key_iters: u32, key_sz: u32) -> Vec<Vec<u8>> {
+pub fn create_derived_keys(secret: &str, salts: &Vec<&str>, key_sz: u32, key_iters: u32) -> Vec<Vec<u8>> {
     let mut mac = Hmac::new(Sha1::new(), secret.as_bytes());
 
     salts.iter().map(|salt| {
@@ -110,9 +110,9 @@ pub enum EncryptorError {
 }
 
 impl Encryptor {
-    pub fn new(secret: &str, salt: &str, sign_salt: &str, key_iters: u32, key_sz: u32) -> Result<Encryptor, EncryptorError> {
+    pub fn new(secret: &str, salt: &str, sign_salt: &str, key_sz: u32, key_iters: u32) -> Result<Encryptor, EncryptorError> {
         let salts = vec![salt, sign_salt];
-        let keys = create_derived_keys(secret, &salts, key_iters, key_sz);
+        let keys = create_derived_keys(secret, &salts, key_sz, key_iters);
 
         match (keys.first(), keys.last()) {
             (Some(cipher_key), Some(sig_key)) => {
@@ -247,7 +247,7 @@ mod tests {
     fn decrypt_and_verify_returns_decoded_message_for_valid_messages() {
         let msg = "c20wSnp6Z1o1U2MyWDVjU3BPeWNNQT09LS1JOWNyR25LdDRpZUUvcmoxVTdoSTNRPT0=--a79c9522355e55bf8e4302c66d8bf5638f1a50ec";
 
-        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 1000, 64).unwrap();
+        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
 
         assert_eq!(encryptor.decrypt_and_verify(msg).unwrap(), "{\"key\":\"value\"}".as_bytes());
     }
@@ -256,7 +256,7 @@ mod tests {
     fn decrypt_and_verify_returns_invalid_signature_error_for_wrong_key(){
         let msg = "SnRXQXFhOE9WSGg2QmVGUDdHdkhNZz09LS1vcjFWcm53VU40YmV0SVcwdWFlK2NRPT0=--c879b51cbd92559d4d684c406b3aaebfbc958e9d";
 
-        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 1000, 64).unwrap();
+        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
 
         assert_eq!(encryptor.decrypt_and_verify(msg).unwrap_err(), EncryptorError::InvalidSignature);
     }
@@ -265,7 +265,7 @@ mod tests {
     fn decrypt_and_verify_returns_invalid_signature_for_empty_message(){
         let msg = "";
 
-        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 1000, 64).unwrap();
+        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
 
         assert_eq!(encryptor.decrypt_and_verify(msg).unwrap_err(), EncryptorError::InvalidSignature);
     }
