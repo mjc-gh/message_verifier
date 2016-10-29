@@ -19,11 +19,18 @@ pub struct Verifier {
     secret_key: Vec<u8>
 }
 
+pub struct Encryptor {
+    secret_key: Vec<u8>,
+    verifier: Verifier
+}
+
 #[derive(Debug, PartialEq)]
-pub enum VerifierError {
+pub enum Error {
     MessageParse,
     InvalidSignature,
-    DecodePayload
+    KeyDerivationFailure,
+    DecodeBase64Failure,
+    DecryptError
 }
 
 pub fn create_derived_keys(secret: &str, salts: &Vec<&str>, key_sz: u32, key_iters: u32) -> Vec<Vec<u8>> {
@@ -61,22 +68,22 @@ impl Verifier {
         }
     }
 
-    pub fn verify(&self, message: &str) -> Result<Vec<u8>, VerifierError> {
+    pub fn verify(&self, message: &str) -> Result<Vec<u8>, Error> {
         match split_by_dashes(&message) {
             Some((encoded_data, signature)) => {
                 match self.is_valid_message(encoded_data, signature) {
                     true => {
                         match encoded_data.from_base64() {
                             Ok(decoded) => Ok(decoded),
-                            Err(_) => Err(VerifierError::DecodePayload)
+                            Err(_) => Err(Error::DecodeBase64Failure)
                         }
                     },
 
-                    false => Err(VerifierError::InvalidSignature)
+                    false => Err(Error::InvalidSignature)
                 }
             },
 
-            None => Err(VerifierError::MessageParse)
+            None => Err(Error::MessageParse)
         }
     }
 
@@ -94,7 +101,7 @@ impl Verifier {
         }
     }
 
-    pub fn generate(&self, message: &str) -> Result<String, VerifierError> {
+    pub fn generate(&self, message: &str) -> Result<String, Error> {
         let mut mac = Hmac::new(Sha1::new(), &self.secret_key);
         let encoded_data = message.as_bytes().to_base64(STANDARD);
 
@@ -107,22 +114,8 @@ impl Verifier {
     }
 }
 
-pub struct Encryptor {
-    secret_key: Vec<u8>,
-    verifier: Verifier
-}
-
-#[derive(Debug, PartialEq)]
-pub enum EncryptorError {
-    KeyDerivationFailed,
-    InvalidSignature,
-    MessageParse,
-    MessageDecode,
-    DecryptError
-}
-
 impl Encryptor {
-    pub fn new(secret: &str, salt: &str, sign_salt: &str, key_sz: u32, key_iters: u32) -> Result<Encryptor, EncryptorError> {
+    pub fn new(secret: &str, salt: &str, sign_salt: &str, key_sz: u32, key_iters: u32) -> Result<Encryptor, Error> {
         let salts = vec![salt, sign_salt];
         let keys = create_derived_keys(secret, &salts, key_sz, key_iters);
 
@@ -136,53 +129,49 @@ impl Encryptor {
                 })
             }
 
-            _ => Err(EncryptorError::KeyDerivationFailed)
+            _ => Err(Error::KeyDerivationFailure)
         }
     }
 
-    pub fn decrypt_and_verify(&self, message: &str) -> Result<Vec<u8>, EncryptorError>  {
-        match self.verifier.verify(message) {
-            Ok(decoded) => {
-                match split_by_dashes_from_u8_slice(&decoded) {
-                    Some((encoded_cipher_text, encoded_iv)) => {
-                        match (encoded_cipher_text.from_base64(), encoded_iv.from_base64()) {
-                            (Ok(cipher_text), Ok(iv)) => {
-                                let key_sz = AesKeySize::KeySize256; // TODO make configurable
-                                let mut decryptor = cbc_decryptor(key_sz, &self.secret_key, &iv, blockmodes::PkcsPadding);
+    pub fn decrypt_and_verify(&self, message: &str) -> Result<Vec<u8>, Error> {
+        let decoded = try!(self.verifier.verify(message));
 
-                                let mut final_result: Vec<u8> = Vec::new();
-                                let mut buffer = [0; 4096];
+        match split_by_dashes_from_u8_slice(&decoded) {
+            Some((encoded_cipher_text, encoded_iv)) => {
+                match (encoded_cipher_text.from_base64(), encoded_iv.from_base64()) {
+                    (Ok(cipher_text), Ok(iv)) => {
+                        let key_sz = AesKeySize::KeySize256; // TODO make configurable
+                        let mut decryptor = cbc_decryptor(key_sz, &self.secret_key, &iv, blockmodes::PkcsPadding);
 
-                                let mut read_buffer = buffer::RefReadBuffer::new(&cipher_text);
-                                let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
+                        let mut final_result: Vec<u8> = Vec::new();
+                        let mut buffer = [0; 4096];
 
-                                loop {
-                                    match decryptor.decrypt(&mut read_buffer, &mut write_buffer, true) {
-                                        Ok(buffer_result) => {
-                                            final_result.extend(write_buffer.take_read_buffer().take_remaining().iter().map(|&i| i));
+                        let mut read_buffer = buffer::RefReadBuffer::new(&cipher_text);
+                        let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
 
-                                            match buffer_result {
-                                                BufferResult::BufferUnderflow => break,
-                                                BufferResult::BufferOverflow => continue
-                                            }
-                                        }
+                        loop {
+                            match decryptor.decrypt(&mut read_buffer, &mut write_buffer, true) {
+                                Ok(buffer_result) => {
+                                    final_result.extend(write_buffer.take_read_buffer().take_remaining().iter().map(|&i| i));
 
-                                        Err(_) => return Err(EncryptorError::DecryptError)
+                                    match buffer_result {
+                                        BufferResult::BufferUnderflow => break,
+                                        BufferResult::BufferOverflow => continue
                                     }
                                 }
 
-                                Ok(final_result)
-                            },
-
-                            _ => Err(EncryptorError::MessageDecode)
+                                Err(_) => return Err(Error::DecryptError)
+                            }
                         }
+
+                        Ok(final_result)
                     },
 
-                    None => Err(EncryptorError::MessageParse)
+                    _ => Err(Error::DecodeBase64Failure)
                 }
-            }
+            },
 
-            Err(_) => Err(EncryptorError::InvalidSignature)
+            None => Err(Error::MessageParse)
         }
     }
 }
@@ -192,10 +181,8 @@ mod tests {
     use std::str;
 
     use Verifier;
-    use VerifierError;
-
     use Encryptor;
-    use EncryptorError;
+    use Error;
 
     #[test]
     fn is_valid_message_returns_true_for_valid_signatures() {
@@ -242,7 +229,7 @@ mod tests {
 
         let verifier = Verifier::new("helloworld");
 
-        assert_eq!(verifier.verify(msg).unwrap_err(), VerifierError::InvalidSignature);
+        assert_eq!(verifier.verify(msg).unwrap_err(), Error::InvalidSignature);
     }
 
     #[test]
@@ -251,7 +238,7 @@ mod tests {
 
         let verifier = Verifier::new("helloworld");
 
-        assert_eq!(verifier.verify(msg).unwrap_err(), VerifierError::MessageParse);
+        assert_eq!(verifier.verify(msg).unwrap_err(), Error::MessageParse);
     }
 
     #[test]
@@ -269,7 +256,7 @@ mod tests {
 
         let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
 
-        assert_eq!(encryptor.decrypt_and_verify(msg).unwrap_err(), EncryptorError::InvalidSignature);
+        assert_eq!(encryptor.decrypt_and_verify(msg).unwrap_err(), Error::InvalidSignature);
     }
 
     #[test]
@@ -278,7 +265,7 @@ mod tests {
 
         let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
 
-        assert_eq!(encryptor.decrypt_and_verify(msg).unwrap_err(), EncryptorError::InvalidSignature);
+        assert_eq!(encryptor.decrypt_and_verify(msg).unwrap_err(), Error::MessageParse);
     }
 
     #[test]

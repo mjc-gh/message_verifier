@@ -38,8 +38,8 @@ fn main() {
         Ok(verified_result) => {
             match encryptor.decrypt_and_verify(&msg2) {
                 Ok(decrypted_result) => {
-                    println!("Verified Message: {}", str::from_utf8(&verified_result).unwrap());
-                    println!("Decrypted Message: {}", str::from_utf8(&decrypted_result).unwrap());
+                    println!("Verified Message: {}", str::from_utf8(&verified_result).expect("Verifier failed"));
+                    println!("Decrypted Message: {}", str::from_utf8(&decrypted_result).expect("Encryptor failed"));
                 }
 
                 Err(e) => panic!("Encryptor Error: {:?}", e)
