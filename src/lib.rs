@@ -10,8 +10,8 @@ use crypto::sha1::Sha1;
 use crypto::pbkdf2::pbkdf2;
 use crypto::util::fixed_time_eq;
 
-use rustc_serialize::hex::FromHex;
-use rustc_serialize::base64::FromBase64;
+use rustc_serialize::hex::{FromHex, ToHex};
+use rustc_serialize::base64::{FromBase64, ToBase64, STANDARD};
 
 use std::str::from_utf8;
 
@@ -93,6 +93,18 @@ impl Verifier {
             Err(_) => false
         }
     }
+
+    pub fn generate(&self, message: &str) -> Result<String, VerifierError> {
+        let mut mac = Hmac::new(Sha1::new(), &self.secret_key);
+        let encoded_data = message.as_bytes().to_base64(STANDARD);
+
+        mac.input(encoded_data.as_bytes());
+
+        let signature = mac.result();
+        let result = format!("{}--{}", encoded_data, signature.code().to_hex());
+
+        Ok(result.clone())
+    }
 }
 
 pub struct Encryptor {
@@ -172,7 +184,6 @@ impl Encryptor {
 
             Err(_) => Err(EncryptorError::InvalidSignature)
         }
-
     }
 }
 
@@ -268,5 +279,13 @@ mod tests {
         let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
 
         assert_eq!(encryptor.decrypt_and_verify(msg).unwrap_err(), EncryptorError::InvalidSignature);
+    }
+
+    #[test]
+    fn generate_returns_signed_and_encoded_string(){
+        let verifier = Verifier::new("helloworld");
+        let expected = "eyJrZXkiOiJ2YWx1ZSJ9--fa115453dbb4a28277b1ba07ef4c7437621f5d72";
+
+        assert_eq!(verifier.generate("{\"key\":\"value\"}").unwrap(), expected.to_string());
     }
 }
