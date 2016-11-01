@@ -1,14 +1,17 @@
 extern crate crypto;
+extern crate rand;
 extern crate rustc_serialize;
 
 use crypto::{buffer, blockmodes};
-use crypto::aes::{cbc_decryptor, KeySize as AesKeySize};
+use crypto::aes::{cbc_decryptor, cbc_encryptor, KeySize as AesKeySize};
 use crypto::buffer::{WriteBuffer, ReadBuffer, BufferResult};
 use crypto::hmac::Hmac;
 use crypto::mac::{Mac};
 use crypto::sha1::Sha1;
 use crypto::pbkdf2::pbkdf2;
 use crypto::util::fixed_time_eq;
+
+use rand::{Rng, OsRng};
 
 use rustc_serialize::hex::{FromHex, ToHex};
 use rustc_serialize::base64::{FromBase64, ToBase64, STANDARD};
@@ -29,8 +32,10 @@ pub enum Error {
     MessageParse,
     InvalidSignature,
     KeyDerivationFailure,
+    RandGeneratorFailure,
     DecodeBase64Failure,
-    DecryptError
+    DecryptError,
+    EncryptError
 }
 
 pub fn create_derived_keys(secret: &str, salts: &Vec<&str>, key_sz: u32, key_iters: u32) -> Vec<Vec<u8>> {
@@ -43,6 +48,20 @@ pub fn create_derived_keys(secret: &str, salts: &Vec<&str>, key_sz: u32, key_ite
 
         result
     }).collect()
+}
+
+fn random_iv(sz: usize) -> Result<Vec<u8>, Error> {
+    match OsRng::new() {
+        Ok(mut rng) => {
+            let mut buffer: Vec<u8> = vec![0; sz];
+
+            rng.fill_bytes(&mut buffer);
+
+            Ok(buffer)
+        }
+
+        Err(_) => Err(Error::RandGeneratorFailure)
+    }
 }
 
 fn split_by_dashes(message: &str) -> Option<(&str, &str)> {
@@ -140,6 +159,8 @@ impl Encryptor {
             Some((encoded_cipher_text, encoded_iv)) => {
                 match (encoded_cipher_text.from_base64(), encoded_iv.from_base64()) {
                     (Ok(cipher_text), Ok(iv)) => {
+                        println!("{:?}", cipher_text);
+                        println!("{:?}", iv);
                         let key_sz = AesKeySize::KeySize256; // TODO make configurable
                         let mut decryptor = cbc_decryptor(key_sz, &self.secret_key, &iv, blockmodes::PkcsPadding);
 
@@ -173,6 +194,38 @@ impl Encryptor {
 
             None => Err(Error::MessageParse)
         }
+    }
+
+    pub fn encrypt_and_sign(&self, message: &str) -> Result<String, Error> {
+        let random_iv = try!(random_iv(16));
+        let key_sz = AesKeySize::KeySize256; // TODO make configurable
+
+        let mut encryptor = cbc_encryptor(key_sz, &self.secret_key, &random_iv, blockmodes::PkcsPadding);
+
+        let mut cipher_result: Vec<u8> = Vec::new();
+        let mut read_buffer = buffer::RefReadBuffer::new(message.as_bytes());
+        let mut buffer = [0; 4096];
+        let mut write_buffer = buffer::RefWriteBuffer::new(&mut buffer);
+
+        loop {
+            match encryptor.encrypt(&mut read_buffer, &mut write_buffer, true) {
+                Ok(buffer_result) => {
+                    cipher_result.extend(write_buffer.take_read_buffer().take_remaining().iter().map(|&i| i));
+
+                    match buffer_result {
+                        BufferResult::BufferUnderflow => break,
+                        BufferResult::BufferOverflow => continue
+                    }
+                }
+
+                Err(_) => return Err(Error::EncryptError)
+            }
+        }
+
+        let encoded_ctxt = cipher_result.to_base64(STANDARD);
+        let encoded_iv = random_iv.to_base64(STANDARD);
+
+        self.verifier.generate(&format!("{}--{}", encoded_ctxt, encoded_iv))
     }
 }
 
@@ -274,5 +327,13 @@ mod tests {
         let expected = "eyJrZXkiOiJ2YWx1ZSJ9--fa115453dbb4a28277b1ba07ef4c7437621f5d72";
 
         assert_eq!(verifier.generate("{\"key\":\"value\"}").unwrap(), expected.to_string());
+    }
+
+    #[test]
+    fn encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string(){
+        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
+        let message = encryptor.encrypt_and_sign("{\"key\":\"value\"}").unwrap();
+
+        assert_eq!(encryptor.decrypt_and_verify(&message).unwrap(), "{\"key\":\"value\"}".as_bytes());
     }
 }
