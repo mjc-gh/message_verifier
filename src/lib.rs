@@ -159,8 +159,6 @@ impl Encryptor {
             Some((encoded_cipher_text, encoded_iv)) => {
                 match (encoded_cipher_text.from_base64(), encoded_iv.from_base64()) {
                     (Ok(cipher_text), Ok(iv)) => {
-                        println!("{:?}", cipher_text);
-                        println!("{:?}", iv);
                         let key_sz = AesKeySize::KeySize256; // TODO make configurable
                         let mut decryptor = cbc_decryptor(key_sz, &self.secret_key, &iv, blockmodes::PkcsPadding);
 
