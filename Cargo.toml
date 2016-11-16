@@ -1,7 +1,11 @@
 [package]
 name = "message_verifier"
 version = "0.1.0"
-authors = ["Michael Coyne <mikeycgto@gmail.com>"]
+description = "Rust Message Verifier library compatible with Rails' MessageVerifier and MessageEncryptor"
+repository = "https://github.com/mikeycgto/message_verifier"
+license = "MIT"
+authors = ["Michael J Coyne <mikeycgto@gmail.com>"]
+keyworks = ["rails", "active support", "crypto", "security"]
 
 [dependencies]
 rustc-serialize = "^0.3"
