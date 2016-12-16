@@ -1,9 +1,8 @@
 # message_verifier 
 
 [![Travis Build Status](https://travis-ci.org/mikeycgto/message_verifier.svg)](https://travis-ci.org/mikeycgto/message_verifier)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![crates.io](https://meritbadge.herokuapp.com/message_verifier)](https://crates.io/crates/message_verifier)
-
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 Message Verifier library compatible with Rails' [MessageVerifier](
 http://api.rubyonrails.org/classes/ActiveSupport/MessageVerifier.html)
