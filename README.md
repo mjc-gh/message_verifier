@@ -1,4 +1,9 @@
-# message_verifier ![Build Status](https://travis-ci.org/mikeycgto/message_verifier.svg)
+# message_verifier 
+
+[![Travis Build Status](https://travis-ci.org/mikeycgto/message_verifier.svg)](https://travis-ci.org/mikeycgto/message_verifier)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![crates.io](https://meritbadge.herokuapp.com/message_verifier)](https://crates.io/crates/message_verifier)
+
 
 Message Verifier library compatible with Rails' [MessageVerifier](
 http://api.rubyonrails.org/classes/ActiveSupport/MessageVerifier.html)
@@ -11,16 +16,9 @@ does not handle serialization aspects. The idea is to input and output
 raw strings to and from this library and handle serialization on another
 layer.
 
-## Usage
+Documentation is available on [Docs.rs](https://docs.rs/message_verifier).
 
-Add this to your `Cargo.toml`:
-
-```toml
-[dependencies]
-message_verifier = "0.1"
-```
-
-## Example
+### Examples
 
 The examples directory contains two Rust examples as well as two small
 Ruby scripts to demonstrate interoperability between this library and
