@@ -1,4 +1,4 @@
-# message_verifier
+# message_verifier ![Build Status](https://travis-ci.org/mikeycgto/message_verifier.svg)
 
 Message Verifier library compatible with Rails' [MessageVerifier](
 http://api.rubyonrails.org/classes/ActiveSupport/MessageVerifier.html)
