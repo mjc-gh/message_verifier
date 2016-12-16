@@ -1,6 +1,6 @@
 [package]
 name = "message_verifier"
-version = "0.1.1"
+version = "0.2.0"
 description = "Rust Message Verifier library compatible with Rails' MessageVerifier and MessageEncryptor"
 repository = "https://github.com/mikeycgto/message_verifier"
 license = "MIT"
@@ -11,3 +11,4 @@ keywords = ["rails", "crypto", "security", "cookies", "sessions"]
 rustc-serialize = "^0.3"
 rust-crypto = "^0.2"
 rand = "0.3"
+error-chain = "0.7.1"
