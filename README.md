@@ -15,6 +15,8 @@ does not handle serialization aspects. The idea is to input and output
 raw strings to and from this library and handle serialization on another
 layer.
 
+### Documentation
+
 Documentation is available on [Docs.rs](https://docs.rs/message_verifier).
 
 ### Examples
