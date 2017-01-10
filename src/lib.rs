@@ -54,13 +54,24 @@ pub struct Encryptor {
     verifier: Verifier
 }
 
-pub fn create_derived_keys(secret: &str, salts: &Vec<&str>, key_sz: u32, key_iters: u32) -> Vec<Vec<u8>> {
+pub struct DerivedKeyParams {
+    size: u32,
+    iterations: u32
+}
+
+impl Default for DerivedKeyParams {
+    fn default() -> DerivedKeyParams {
+        DerivedKeyParams { size: 64, iterations: 1000 }
+    }
+}
+
+pub fn create_derived_keys(secret: &str, salts: &Vec<&str>, key_params: DerivedKeyParams) -> Vec<Vec<u8>> {
     let mut mac = Hmac::new(Sha1::new(), secret.as_bytes());
 
     salts.iter().map(|salt| {
-        let mut result: Vec<u8> = vec![0; key_sz as usize];
+        let mut result: Vec<u8> = vec![0; key_params.size as usize];
 
-        pbkdf2(&mut mac, salt.as_bytes(), key_iters, &mut result);
+        pbkdf2(&mut mac, salt.as_bytes(), key_params.iterations, &mut result);
 
         result
     }).collect()
@@ -140,9 +151,9 @@ impl Verifier {
 }
 
 impl Encryptor {
-    pub fn new(secret: &str, salt: &str, sign_salt: &str, key_sz: u32, key_iters: u32) -> Result<Encryptor> {
+    pub fn new(secret: &str, salt: &str, sign_salt: &str, key_params: DerivedKeyParams) -> Result<Encryptor> {
         let salts = vec![salt, sign_salt];
-        let keys = create_derived_keys(secret, &salts, key_sz, key_iters);
+        let keys = create_derived_keys(secret, &salts, key_params);
 
         match (keys.first(), keys.last()) {
             (Some(cipher_key), Some(sig_key)) => {
@@ -239,6 +250,7 @@ mod tests {
 
     use Verifier;
     use Encryptor;
+    use DerivedKeyParams;
     use ErrorKind;
 
     #[test]
@@ -302,7 +314,8 @@ mod tests {
     fn decrypt_and_verify_returns_decoded_message_for_valid_messages() {
         let msg = "c20wSnp6Z1o1U2MyWDVjU3BPeWNNQT09LS1JOWNyR25LdDRpZUUvcmoxVTdoSTNRPT0=--a79c9522355e55bf8e4302c66d8bf5638f1a50ec";
 
-        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
+        let dkp = DerivedKeyParams::default();
+        let encryptor = Encryptor::new( "helloworld", "test salt", "test signed salt", dkp).unwrap();
 
         assert_eq!(encryptor.decrypt_and_verify(msg).unwrap(), "{\"key\":\"value\"}".as_bytes());
     }
@@ -311,7 +324,8 @@ mod tests {
     fn decrypt_and_verify_returns_invalid_signature_error_for_wrong_key(){
         let msg = "SnRXQXFhOE9WSGg2QmVGUDdHdkhNZz09LS1vcjFWcm53VU40YmV0SVcwdWFlK2NRPT0=--c879b51cbd92559d4d684c406b3aaebfbc958e9d";
 
-        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
+        let dkp = DerivedKeyParams::default();
+        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
 
         assert_error_kind!(encryptor.decrypt_and_verify(msg).unwrap_err(), ErrorKind::InvalidSignature);
     }
@@ -320,7 +334,8 @@ mod tests {
     fn decrypt_and_verify_returns_invalid_message_for_empty_message(){
         let msg = "";
 
-        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
+        let dkp = DerivedKeyParams::default();
+        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
 
         assert_error_kind!(encryptor.decrypt_and_verify(msg).unwrap_err(), ErrorKind::InvalidMessage);
     }
@@ -335,7 +350,9 @@ mod tests {
 
     #[test]
     fn encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string(){
-        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", 64, 1000).unwrap();
+        let dkp = DerivedKeyParams::default();
+        let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
+
         let message = encryptor.encrypt_and_sign("{\"key\":\"value\"}").unwrap();
 
         assert_eq!(encryptor.decrypt_and_verify(&message).unwrap(), "{\"key\":\"value\"}".as_bytes());

@@ -1,6 +1,6 @@
 extern crate message_verifier;
 
-use message_verifier::{Verifier, Encryptor};
+use message_verifier::{Verifier, Encryptor, DerivedKeyParams};
 
 use std::io;
 use std::str;
@@ -11,7 +11,9 @@ fn main() {
     let sign_salt = "test signed salt";
 
     let verifier = Verifier::new(key_base);
-    let encryptor = Encryptor::new(key_base, salt, sign_salt, 64, 1000).unwrap();
+
+    let dkp = DerivedKeyParams::default();
+    let encryptor = Encryptor::new(key_base, salt, sign_salt, dkp).unwrap();
 
     let mut input: Vec<String> = vec![];
     let mut buffer = String::new();
