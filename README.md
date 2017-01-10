@@ -57,4 +57,6 @@ Decrypted Message: {"key":"value"}
 ## Supported Ciphers
 
 Currently only AES in CBC mode with 256, 192, or 128 bits is
-supported. For more options please open an issue or submit a PR
+supported.
+
+If you need more cipher options, please open an issue or submit a PR!
