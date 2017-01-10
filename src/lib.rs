@@ -49,7 +49,24 @@ pub struct Verifier {
     secret_key: Vec<u8>
 }
 
+pub enum EncryptorCipher {
+    Aes128,
+    Aes192,
+    Aes256
+}
+
+impl From<EncryptorCipher> for AesKeySize {
+    fn from(cipher: EncryptorCipher) -> AesKeySize {
+        match cipher {
+            EncryptorCipher::Aes128 => AesKeySize::KeySize128,
+            EncryptorCipher::Aes192 => AesKeySize::KeySize192,
+            EncryptorCipher::Aes256 => AesKeySize::KeySize256
+        }
+    }
+}
+
 pub struct Encryptor {
+    cipher: AesKeySize,
     secret_key: Vec<u8>,
     verifier: Verifier
 }
@@ -158,6 +175,7 @@ impl Encryptor {
         match (keys.first(), keys.last()) {
             (Some(cipher_key), Some(sig_key)) => {
                 Ok(Encryptor {
+                    cipher: AesKeySize::KeySize256,
                     secret_key: cipher_key.to_vec(),
                     verifier: Verifier {
                         secret_key: sig_key.to_vec()
@@ -169,6 +187,11 @@ impl Encryptor {
         }
     }
 
+    pub fn set_cipher(&mut self, cipher: EncryptorCipher) -> &mut Encryptor {
+        self.cipher = AesKeySize::from(cipher);
+        self
+    }
+
     pub fn decrypt_and_verify(&self, message: &str) -> Result<Vec<u8>> {
         let decoded = try!(self.verifier.verify(message));
         let (encoded_cipher_text, encoded_iv) = try!(split_by_dashes_from_u8_slice(&decoded));
@@ -176,8 +199,7 @@ impl Encryptor {
         let cipher_text = try!(encoded_cipher_text.from_base64());
         let iv = try!(encoded_iv.from_base64());
 
-        let key_sz = AesKeySize::KeySize256; // TODO make configurable
-        let mut decryptor = cbc_decryptor(key_sz, &self.secret_key, &iv, blockmodes::PkcsPadding);
+        let mut decryptor = cbc_decryptor(self.cipher, &self.secret_key, &iv, blockmodes::PkcsPadding);
 
         let mut final_result: Vec<u8> = Vec::new();
         let mut buffer = [0; 4096];
@@ -205,9 +227,8 @@ impl Encryptor {
 
     pub fn encrypt_and_sign(&self, message: &str) -> Result<String> {
         let random_iv = try!(random_iv(16));
-        let key_sz = AesKeySize::KeySize256; // TODO make configurable
 
-        let mut encryptor = cbc_encryptor(key_sz, &self.secret_key, &random_iv, blockmodes::PkcsPadding);
+        let mut encryptor = cbc_encryptor(self.cipher, &self.secret_key, &random_iv, blockmodes::PkcsPadding);
 
         let mut cipher_result: Vec<u8> = Vec::new();
         let mut read_buffer = buffer::RefReadBuffer::new(message.as_bytes());
@@ -250,6 +271,7 @@ mod tests {
 
     use Verifier;
     use Encryptor;
+    use EncryptorCipher;
     use DerivedKeyParams;
     use ErrorKind;
 
@@ -352,6 +374,22 @@ mod tests {
     fn encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string(){
         let dkp = DerivedKeyParams::default();
         let encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
+
+        let message = encryptor.encrypt_and_sign("{\"key\":\"value\"}").unwrap();
+
+        assert_eq!(encryptor.decrypt_and_verify(&message).unwrap(), "{\"key\":\"value\"}".as_bytes());
+    }
+
+    //#[test]
+    //fn decrypt_and_verify_returns_decoded_message_with_non_default_cipher_for_valid_messages() {
+    //}
+
+    #[test]
+    fn encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string_with_non_default_cipher(){
+        let dkp = DerivedKeyParams::default();
+        let mut encryptor = Encryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
+
+        encryptor.set_cipher(EncryptorCipher::Aes192);
 
         let message = encryptor.encrypt_and_sign("{\"key\":\"value\"}").unwrap();
 
