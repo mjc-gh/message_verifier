@@ -5,7 +5,7 @@ description = "Rust Message Verifier library compatible with Rails' MessageVerif
 repository = "https://github.com/mikeycgto/message_verifier"
 license = "MIT"
 authors = ["Michael J Coyne <mikeycgto@gmail.com>"]
-keywords = ["rails", "crypto", "security", "cookies", "sessions"]
+keywords = ["crypto", "security", "rails", "cookies", "sessions"]
 
 [dependencies]
 rustc-serialize = "^0.3"
