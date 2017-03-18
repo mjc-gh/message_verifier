@@ -1,6 +1,6 @@
 extern crate message_verifier;
 
-use message_verifier::{Verifier, Encryptor, DerivedKeyParams};
+use message_verifier::{Verifier, Encryptor, AesHmacEncryptor, DerivedKeyParams};
 
 fn main() {
     let key_base = "helloworld";
@@ -10,7 +10,7 @@ fn main() {
     let verifier = Verifier::new(key_base);
 
     let dkp = DerivedKeyParams::default();
-    let encryptor = Encryptor::new(key_base, salt, sign_salt, dkp).unwrap();
+    let encryptor = AesHmacEncryptor::new(key_base, salt, sign_salt, dkp).unwrap();
 
     let message = "{\"key\":\"value\"}";
 
