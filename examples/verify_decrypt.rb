@@ -4,7 +4,7 @@ require 'json'
 key_base = 'helloworld'
 key_gen  = ActiveSupport::KeyGenerator.new(key_base, iterations: 1000)
 
-salt      = key_gen.generate_key('test salt')
+salt      = key_gen.generate_key('test salt')[0, ActiveSupport::MessageEncryptor.key_len]
 sign_salt = key_gen.generate_key('test signed salt')
 
 verifier  = ActiveSupport::MessageVerifier.new(key_base, serializer: JSON)

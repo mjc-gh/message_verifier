@@ -1,6 +1,6 @@
 extern crate message_verifier;
 
-use message_verifier::{Verifier, Encryptor, DerivedKeyParams};
+use message_verifier::{Verifier, Encryptor, AesHmacEncryptor, DerivedKeyParams};
 
 use std::io;
 use std::str;
@@ -13,7 +13,7 @@ fn main() {
     let verifier = Verifier::new(key_base);
 
     let dkp = DerivedKeyParams::default();
-    let encryptor = Encryptor::new(key_base, salt, sign_salt, dkp).unwrap();
+    let encryptor = AesHmacEncryptor::new(key_base, salt, sign_salt, dkp).unwrap();
 
     let mut input: Vec<String> = vec![];
     let mut buffer = String::new();
@@ -39,7 +39,7 @@ fn main() {
     match verifier.verify(&msg1) {
         Ok(verified_result) => {
             match encryptor.decrypt_and_verify(&msg2) {
-                Ok(decrypted_result) => {
+                Ok(ref decrypted_result) => {
                     println!("Verified Message: {}", str::from_utf8(&verified_result).expect("Verifier failed"));
                     println!("Decrypted Message: {}", str::from_utf8(&decrypted_result).expect("Encryptor failed"));
                 }

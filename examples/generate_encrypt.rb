@@ -1,14 +1,16 @@
 require 'active_support'
 require 'json'
 
-key_base = 'helloworld'
-key_gen  = ActiveSupport::KeyGenerator.new(key_base, iterations: 1000)
+include ActiveSupport
 
-salt      = key_gen.generate_key('test salt')
+key_base = 'helloworld'
+key_gen  = KeyGenerator.new(key_base, iterations: 1000)
+
+salt      = key_gen.generate_key('test salt')[0, MessageEncryptor.key_len]
 sign_salt = key_gen.generate_key('test signed salt')
 
-verifier  = ActiveSupport::MessageVerifier.new(key_base, serializer: JSON)
-encryptor = ActiveSupport::MessageEncryptor.new(salt, sign_salt, serializer: JSON)
+verifier  = MessageVerifier.new(key_base, serializer: JSON)
+encryptor = MessageEncryptor.new(salt, sign_salt, serializer: JSON)
 
 message = { key: 'value' }
 
