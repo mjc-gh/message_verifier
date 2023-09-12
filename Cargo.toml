@@ -1,6 +1,7 @@
 [package]
 name = "message_verifier"
 version = "1.1.0"
+edition = "2021"
 description = "Rust Message Verifier library compatible with Rails' MessageVerifier and MessageEncryptor"
 repository = "https://github.com/mikeycgto/message_verifier"
 documentation = "https://docs.rs/message_verifier"
@@ -9,7 +10,8 @@ authors = ["Michael J Coyne <mikeycgto@gmail.com>"]
 keywords = ["crypto", "security", "rails", "cookies", "sessions"]
 
 [dependencies]
-rustc-serialize = "^0.3"
-rust-crypto = "^0.2"
-rand = "0.3"
-error-chain = "0.7.1"
+base64 = "0.21.4"
+error-chain = "0.12.4"
+hex = "0.4.3"
+rust-crypto = "0.2.36" # TODO: replace with actively maintained crate
+rand = "0.8.5"

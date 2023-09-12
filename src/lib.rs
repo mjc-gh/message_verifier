@@ -30,10 +30,6 @@
 //!  }
 //! ```
 
-extern crate crypto;
-extern crate rand;
-extern crate rustc_serialize;
-
 #[macro_use]
 extern crate error_chain;
 
@@ -48,16 +44,15 @@ use crypto::sha1::Sha1;
 use crypto::pbkdf2::pbkdf2;
 use crypto::util::fixed_time_eq;
 
-use rand::{Rng, OsRng};
+use rand::RngCore;
 
-use rustc_serialize::hex::{FromHex, ToHex};
-use rustc_serialize::base64::{FromBase64, FromBase64Error, ToBase64, STANDARD};
+use base64::{engine::general_purpose::STANDARD as base64, Engine as _};
 
 use std::str::from_utf8;
 
 error_chain! {
     foreign_links {
-        DecodeBase64(FromBase64Error);
+        DecodeBase64(base64::DecodeError);
     }
 
     errors {
@@ -71,10 +66,6 @@ error_chain! {
 
         KeyDerivationFailure {
             description("Key Derivation Function failed to generate one or more keys")
-        }
-
-        RandomGeneratorFailure {
-            description("OsRng failed to generate random bytes")
         }
     }
 }
@@ -104,8 +95,8 @@ impl From<KeySize> for AesKeySize {
 /// Encryptor trait; similiar to ActiveSupport::MessageEncryptor. Implemented by AesHmacEncryptor
 /// and AesGcmEncryptor.
 pub trait Encryptor {
-    fn decrypt_and_verify(&self, &str) -> Result<Vec<u8>>;
-    fn encrypt_and_sign(&self, &str) -> Result<String>;
+    fn decrypt_and_verify(&self, message: &str) -> Result<Vec<u8>>;
+    fn encrypt_and_sign(&self, message: &str) -> Result<String>;
 }
 
 /// AesHmacEncryptor struct; similiar to ActiveSupport::MessageEncryptor
@@ -151,18 +142,11 @@ pub fn create_derived_keys(salts: &Vec<&str>, secret: &str, key_params: DerivedK
     }).collect()
 }
 
-fn random_iv(sz: usize) -> Result<Vec<u8>> {
-    match OsRng::new() {
-        Ok(mut rng) => {
-            let mut buffer: Vec<u8> = vec![0; sz];
-
-            rng.fill_bytes(&mut buffer);
-
-            Ok(buffer)
-        }
-
-        Err(_) => bail!(ErrorKind::RandomGeneratorFailure)
-    }
+fn random_iv(sz: usize) -> Vec<u8> {
+    let mut rng = rand::thread_rng();
+    let mut buffer: Vec<u8> = vec![0; sz];
+    rng.fill_bytes(&mut buffer);
+    buffer
 }
 
 fn split_by_n_dashes(n: usize, message: &str) -> Result<Vec<&str>> {
@@ -198,14 +182,14 @@ impl Verifier {
         let signature = msg_split[1];
 
         match self.is_valid_message(encoded_data, signature) {
-            true  => Ok(encoded_data.from_base64()?),
+            true  => Ok(base64.decode(encoded_data)?),
             false => bail!(ErrorKind::InvalidSignature)
         }
     }
 
     /// Check if the given signature is valid for some encoded data.
     pub fn is_valid_message(&self, encoded_data: &str, signature: &str) -> bool {
-        match signature.from_hex() {
+        match hex::decode(signature) {
             Ok(sig_bytes) => {
                 let mut mac = Hmac::new(Sha1::new(), &self.secret_key);
 
@@ -222,12 +206,12 @@ impl Verifier {
     /// be consumed and verified by a compatible verifier.
     pub fn generate(&self, message: &str) -> String {
         let mut mac = Hmac::new(Sha1::new(), &self.secret_key);
-        let encoded_data = message.as_bytes().to_base64(STANDARD);
+        let encoded_data = base64.encode(message.as_bytes());
 
         mac.input(encoded_data.as_bytes());
 
         let signature = mac.result();
-        let result = format!("{}--{}", encoded_data, signature.code().to_hex());
+        let result = format!("{}--{}", encoded_data, hex::encode(signature.code()));
 
         result.clone()
     }
@@ -268,8 +252,8 @@ impl Encryptor for AesHmacEncryptor {
         let decoded = self.verifier.verify(message)?;
         let msg_split = split_by_n_dashes_from_u8_slice(2, &decoded)?;
 
-        let cipher_text = msg_split[0].from_base64()?;
-        let iv = msg_split[1].from_base64()?;
+        let cipher_text = base64.decode(msg_split[0])?;
+        let iv = base64.decode(msg_split[1])?;
 
         let mut decryptor = cbc_decryptor(self.key_size, &self.secret_key, &iv, blockmodes::PkcsPadding);
 
@@ -300,7 +284,7 @@ impl Encryptor for AesHmacEncryptor {
     /// Encrypt and sign a message from the input message. This message can be consumed by a
     /// compatible Encryptor
     fn encrypt_and_sign(&self, message: &str) -> Result<String> {
-        let random_iv = random_iv(16)?;
+        let random_iv = random_iv(16);
 
         let mut encryptor = cbc_encryptor(self.key_size, &self.secret_key, &random_iv, blockmodes::PkcsPadding);
 
@@ -324,8 +308,8 @@ impl Encryptor for AesHmacEncryptor {
             }
         }
 
-        let encoded_ctxt = cipher_result.to_base64(STANDARD);
-        let encoded_iv = random_iv.to_base64(STANDARD);
+        let encoded_ctxt = base64.encode(cipher_result);
+        let encoded_iv = base64.encode(random_iv);
 
         Ok(self.verifier.generate(&format!("{}--{}", encoded_ctxt, encoded_iv)))
     }
@@ -362,9 +346,9 @@ impl Encryptor for AesGcmEncryptor {
     fn decrypt_and_verify(&self, message: &str) -> Result<Vec<u8>> {
         let msg_split = split_by_n_dashes(3, &message)?;
 
-        let cipher_text = msg_split[0].from_base64()?;
-        let iv = msg_split[1].from_base64()?;
-        let auth_tag = msg_split[2].from_base64()?;
+        let cipher_text = base64.decode(msg_split[0])?;
+        let iv = base64.decode(msg_split[1])?;
+        let auth_tag = base64.decode(msg_split[2])?;
 
         let mut decryptor = AesGcm::new(self.key_size, &self.secret_key[0..32], &iv[0..12], &vec![0; 0]);
         let mut output: Vec<u8> = vec![0; cipher_text.len()];
@@ -378,7 +362,7 @@ impl Encryptor for AesGcmEncryptor {
     /// Encrypt a message, using AEAD, from the input message. This message can be consumed by a
     /// compatible Encryptor
     fn encrypt_and_sign(&self, message: &str) -> Result<String> {
-        let random_iv = random_iv(12)?;
+        let random_iv = random_iv(12);
         let aad = vec![0; 0];
 
         let mut encryptor = AesGcm::new(self.key_size, &self.secret_key[0..32], &random_iv, &aad);
@@ -388,9 +372,9 @@ impl Encryptor for AesGcmEncryptor {
 
         encryptor.encrypt(message.as_bytes(), &mut output, &mut auth_tag);
 
-        let encoded_ctxt = output.to_base64(STANDARD);
-        let encoded_iv = random_iv.to_base64(STANDARD);
-        let encoded_tag = auth_tag.to_base64(STANDARD);
+        let encoded_ctxt = base64.encode(output);
+        let encoded_iv = base64.encode(random_iv);
+        let encoded_tag = base64.encode(auth_tag);
 
         Ok(format!("{}--{}--{}", encoded_ctxt, encoded_iv, encoded_tag))
     }
@@ -407,7 +391,7 @@ mod tests {
     }
 
     use std::str;
-    use {Verifier, Encryptor, KeySize, AesHmacEncryptor, AesGcmEncryptor, DerivedKeyParams, ErrorKind};
+    use crate::*;
 
     #[test]
     fn is_valid_message_returns_true_for_valid_signatures() {
