@@ -36,7 +36,10 @@ extern crate error_chain;
 use aes::cipher::generic_array::GenericArray;
 use base64::{engine::general_purpose::STANDARD as base64, Engine as _};
 use digest::CtOutput;
-use pbkdf2::{hmac::{Hmac, Mac}, pbkdf2_hmac};
+use pbkdf2::{
+    hmac::{Hmac, Mac},
+    pbkdf2_hmac,
+};
 use rand::RngCore;
 use sha1::Sha1;
 use subtle::ConstantTimeEq;
@@ -64,14 +67,14 @@ error_chain! {
 
 /// Verifier struct; similiar to ActiveSupport::MessageVerifier.
 pub struct Verifier {
-    secret_key: Vec<u8>
+    secret_key: Vec<u8>,
 }
 
 /// Encryption cipher key options. Only AES with 256, 192 or 128 bits is supported.
 pub enum KeySize {
     Aes128,
     Aes192,
-    Aes256
+    Aes256,
 }
 
 /// Encryptor trait; similiar to ActiveSupport::MessageEncryptor. Implemented by AesHmacEncryptor
@@ -85,7 +88,7 @@ pub trait Encryptor {
 pub struct AesHmacEncryptor {
     pub key_size: KeySize,
     secret_key: Vec<u8>,
-    verifier: Verifier
+    verifier: Verifier,
 }
 
 /// AesGcmEncryptor struct; similiar to ActiveSupport::MessageEncryptor
@@ -97,7 +100,7 @@ pub struct AesGcmEncryptor {
 /// Key derivation parameters for PBKDF2 function.
 pub struct DerivedKeyParams {
     size: u32,
-    iterations: u32
+    iterations: u32,
 }
 
 impl Default for DerivedKeyParams {
@@ -106,18 +109,33 @@ impl Default for DerivedKeyParams {
     ///
     /// ActiveSupport::KeyGenerator will default to 2^16 (65536) iterations.
     fn default() -> DerivedKeyParams {
-        DerivedKeyParams { size: 64, iterations: 1000 }
+        DerivedKeyParams {
+            size: 64,
+            iterations: 1000,
+        }
     }
 }
 
 /// Create one or more PBKDF2 derived keys using a secret, some key parameters
 /// and one or more salts.
-pub fn create_derived_keys(salts: &Vec<&str>, secret: &str, key_params: DerivedKeyParams) -> Vec<Vec<u8>> {
-    salts.iter().map(|salt| {
-        let mut result: Vec<u8> = vec![0; key_params.size as usize];
-        pbkdf2_hmac::<Sha1>(secret.as_bytes(), salt.as_bytes(), key_params.iterations, &mut result);
-        result
-    }).collect()
+pub fn create_derived_keys(
+    salts: &Vec<&str>,
+    secret: &str,
+    key_params: DerivedKeyParams,
+) -> Vec<Vec<u8>> {
+    salts
+        .iter()
+        .map(|salt| {
+            let mut result: Vec<u8> = vec![0; key_params.size as usize];
+            pbkdf2_hmac::<Sha1>(
+                secret.as_bytes(),
+                salt.as_bytes(),
+                key_params.iterations,
+                &mut result,
+            );
+            result
+        })
+        .collect()
 }
 
 fn random_iv(sz: usize) -> Vec<u8> {
@@ -140,7 +158,7 @@ fn split_by_n_dashes(n: usize, message: &str) -> Result<Vec<&str>> {
 fn split_by_n_dashes_from_u8_slice(n: usize, slice: &[u8]) -> Result<Vec<&str>> {
     match std::str::from_utf8(slice) {
         Ok(string) => split_by_n_dashes(n, string),
-        Err(_) => bail!(ErrorKind::InvalidMessage)
+        Err(_) => bail!(ErrorKind::InvalidMessage),
     }
 }
 
@@ -148,7 +166,7 @@ impl Verifier {
     /// Create a new Verifier object.
     pub fn new(secret: &str) -> Verifier {
         Verifier {
-            secret_key: secret.bytes().collect()
+            secret_key: secret.bytes().collect(),
         }
     }
 
@@ -160,8 +178,8 @@ impl Verifier {
         let signature = msg_split[1];
 
         match self.is_valid_message(encoded_data, signature)? {
-            true  => Ok(base64.decode(encoded_data)?),
-            false => bail!(ErrorKind::InvalidSignature)
+            true => Ok(base64.decode(encoded_data)?),
+            false => bail!(ErrorKind::InvalidSignature),
         }
     }
 
@@ -173,9 +191,9 @@ impl Verifier {
                 mac.update(encoded_data.as_bytes());
                 let sig = CtOutput::new(GenericArray::clone_from_slice(sig_bytes.as_slice()));
                 Ok(mac.finalize().ct_eq(&sig).into())
-            },
+            }
 
-            Err(_) => Ok(false)
+            Err(_) => Ok(false),
         }
     }
 
@@ -196,22 +214,25 @@ impl Verifier {
 
 impl AesHmacEncryptor {
     /// Create a new AesHmacEncryptor object
-    pub fn new(secret: &str, salt: &str, sign_salt: &str, key_params: DerivedKeyParams) -> Result<AesHmacEncryptor> {
+    pub fn new(
+        secret: &str,
+        salt: &str,
+        sign_salt: &str,
+        key_params: DerivedKeyParams,
+    ) -> Result<AesHmacEncryptor> {
         let salts = vec![salt, sign_salt];
         let keys = create_derived_keys(&salts, secret, key_params);
 
         match (keys.first(), keys.last()) {
-            (Some(cipher_key), Some(sig_key)) => {
-                Ok(AesHmacEncryptor {
-                    key_size: KeySize::Aes256,
-                    secret_key: cipher_key.to_vec(),
-                    verifier: Verifier {
-                        secret_key: sig_key.to_vec()
-                    }
-                })
-            }
+            (Some(cipher_key), Some(sig_key)) => Ok(AesHmacEncryptor {
+                key_size: KeySize::Aes256,
+                secret_key: cipher_key.to_vec(),
+                verifier: Verifier {
+                    secret_key: sig_key.to_vec(),
+                },
+            }),
 
-            _ => bail!(ErrorKind::KeyDerivationFailure)
+            _ => bail!(ErrorKind::KeyDerivationFailure),
         }
     }
 }
@@ -230,15 +251,19 @@ impl Encryptor for AesHmacEncryptor {
 
         match self.key_size {
             KeySize::Aes128 => {
-                cbc::Decryptor::<aes::Aes128>::new_from_slices(&self.secret_key[0..16], &iv)?.decrypt_padded_vec_mut::<Pkcs7>(&cipher_text)
+                cbc::Decryptor::<aes::Aes128>::new_from_slices(&self.secret_key[0..16], &iv)?
+                    .decrypt_padded_vec_mut::<Pkcs7>(&cipher_text)
             }
             KeySize::Aes192 => {
-                cbc::Decryptor::<aes::Aes192>::new_from_slices(&self.secret_key[0..24], &iv)?.decrypt_padded_vec_mut::<Pkcs7>(&cipher_text)
+                cbc::Decryptor::<aes::Aes192>::new_from_slices(&self.secret_key[0..24], &iv)?
+                    .decrypt_padded_vec_mut::<Pkcs7>(&cipher_text)
             }
             KeySize::Aes256 => {
-                cbc::Decryptor::<aes::Aes256>::new_from_slices(&self.secret_key[0..32], &iv)?.decrypt_padded_vec_mut::<Pkcs7>(&cipher_text)
+                cbc::Decryptor::<aes::Aes256>::new_from_slices(&self.secret_key[0..32], &iv)?
+                    .decrypt_padded_vec_mut::<Pkcs7>(&cipher_text)
             }
-        }.or(Err(ErrorKind::InvalidMessage.into()))
+        }
+        .or(Err(ErrorKind::InvalidMessage.into()))
     }
 
     /// Encrypt and sign a message from the input message. This message can be consumed by a
@@ -251,20 +276,24 @@ impl Encryptor for AesHmacEncryptor {
 
         let cipher_result = match self.key_size {
             KeySize::Aes128 => {
-                cbc::Encryptor::<aes::Aes128>::new_from_slices(&self.secret_key[0..16], &iv)?.encrypt_padded_vec_mut::<Pkcs7>(&message)
+                cbc::Encryptor::<aes::Aes128>::new_from_slices(&self.secret_key[0..16], &iv)?
+                    .encrypt_padded_vec_mut::<Pkcs7>(&message)
             }
             KeySize::Aes192 => {
-                cbc::Encryptor::<aes::Aes192>::new_from_slices(&self.secret_key[0..24], &iv)?.encrypt_padded_vec_mut::<Pkcs7>(&message)
+                cbc::Encryptor::<aes::Aes192>::new_from_slices(&self.secret_key[0..24], &iv)?
+                    .encrypt_padded_vec_mut::<Pkcs7>(&message)
             }
             KeySize::Aes256 => {
-                cbc::Encryptor::<aes::Aes256>::new_from_slices(&self.secret_key[0..32], &iv)?.encrypt_padded_vec_mut::<Pkcs7>(&message)
+                cbc::Encryptor::<aes::Aes256>::new_from_slices(&self.secret_key[0..32], &iv)?
+                    .encrypt_padded_vec_mut::<Pkcs7>(&message)
             }
         };
 
         let encoded_ctxt = base64.encode(cipher_result);
         let encoded_iv = base64.encode(iv);
 
-        self.verifier.generate(&format!("{}--{}", encoded_ctxt, encoded_iv))
+        self.verifier
+            .generate(&format!("{}--{}", encoded_ctxt, encoded_iv))
     }
 }
 
@@ -275,14 +304,12 @@ impl AesGcmEncryptor {
         let keys = create_derived_keys(&salts, secret, key_params);
 
         match keys.first() {
-            Some(cipher_key) => {
-                Ok(AesGcmEncryptor {
-                    key_size: KeySize::Aes256,
-                    secret_key: cipher_key.to_vec(),
-                })
-            }
+            Some(cipher_key) => Ok(AesGcmEncryptor {
+                key_size: KeySize::Aes256,
+                secret_key: cipher_key.to_vec(),
+            }),
 
-            _ => bail!(ErrorKind::KeyDerivationFailure)
+            _ => bail!(ErrorKind::KeyDerivationFailure),
         }
     }
 }
@@ -297,7 +324,7 @@ impl Encryptor for AesGcmEncryptor {
         let iv = GenericArray::clone_from_slice(&base64.decode(msg_split[1])?);
         let auth_tag = GenericArray::clone_from_slice(&base64.decode(msg_split[2])?);
 
-        use aes_gcm::{aead::KeyInit, AesGcm, AeadInPlace};
+        use aes_gcm::{aead::KeyInit, AeadInPlace, AesGcm};
         use digest::consts::U12;
 
         let result = match self.key_size {
@@ -325,9 +352,9 @@ impl Encryptor for AesGcmEncryptor {
     fn encrypt_and_sign(&self, message: &str) -> Result<String> {
         let random_iv = GenericArray::clone_from_slice(&random_iv(12));
 
-        use aes_gcm::{aead::KeyInit, AesGcm, AeadInPlace};
+        use aes_gcm::{aead::KeyInit, AeadInPlace, AesGcm};
         use digest::consts::U12;
-        
+
         let mut output: Vec<u8> = message.as_bytes().to_vec();
         let auth_tag = match self.key_size {
             KeySize::Aes128 => {
@@ -358,10 +385,12 @@ impl Encryptor for AesGcmEncryptor {
 mod tests {
     // assert_error_kind!(err, kind)
     macro_rules! assert_error_kind {
-        ($err:expr, $kind:pat) => (match *$err.kind() {
-            $kind => assert!(true, "{:?} is of kind {:?}", $err, stringify!($kind)),
-            _     => assert!(false, "{:?} is NOT of kind {:?}", $err, stringify!($kind))
-        });
+        ($err:expr, $kind:pat) => {
+            match *$err.kind() {
+                $kind => assert!(true, "{:?} is of kind {:?}", $err, stringify!($kind)),
+                _ => assert!(false, "{:?} is NOT of kind {:?}", $err, stringify!($kind)),
+            }
+        };
     }
 
     use crate::*;
@@ -369,7 +398,7 @@ mod tests {
     #[test]
     fn is_valid_message_returns_true_for_valid_signatures() {
         let data = "eyJrZXkiOiJ2YWx1ZSJ9";
-        let sig  = "fa115453dbb4a28277b1ba07ef4c7437621f5d72";
+        let sig = "fa115453dbb4a28277b1ba07ef4c7437621f5d72";
 
         let verifier = Verifier::new("helloworld");
 
@@ -379,7 +408,7 @@ mod tests {
     #[test]
     fn is_valid_message_returns_false_for_invalid_signatures() {
         let data = "eyJrZXkiOiJ2YWx1ZSJ9";
-        let sig  = "05330518df0e21fb9beec7a71a5f5f951c3f5254";
+        let sig = "05330518df0e21fb9beec7a71a5f5f951c3f5254";
 
         let verifier = Verifier::new("helloworld");
 
@@ -389,7 +418,7 @@ mod tests {
     #[test]
     fn is_valid_message_returns_false_for_invalid_messages() {
         let data = "baddata";
-        let sig  = "badsig";
+        let sig = "badsig";
 
         let verifier = Verifier::new("helloworld");
 
@@ -402,7 +431,10 @@ mod tests {
 
         let verifier = Verifier::new("helloworld");
 
-        assert_eq!(verifier.verify(msg).unwrap(), "{\"key\":\"value\"}".as_bytes());
+        assert_eq!(
+            verifier.verify(msg).unwrap(),
+            "{\"key\":\"value\"}".as_bytes()
+        );
     }
 
     #[test]
@@ -411,7 +443,10 @@ mod tests {
 
         let verifier = Verifier::new("helloworld");
 
-        assert_error_kind!(verifier.verify(msg).unwrap_err(), ErrorKind::InvalidSignature);
+        assert_error_kind!(
+            verifier.verify(msg).unwrap_err(),
+            ErrorKind::InvalidSignature
+        );
     }
 
     #[test]
@@ -424,11 +459,14 @@ mod tests {
     }
 
     #[test]
-    fn generate_returns_signed_and_encoded_string(){
+    fn generate_returns_signed_and_encoded_string() {
         let verifier = Verifier::new("helloworld");
         let expected = "eyJrZXkiOiJ2YWx1ZSJ9--fa115453dbb4a28277b1ba07ef4c7437621f5d72";
 
-        assert_eq!(verifier.generate("{\"key\":\"value\"}").unwrap(), expected.to_string());
+        assert_eq!(
+            verifier.generate("{\"key\":\"value\"}").unwrap(),
+            expected.to_string()
+        );
     }
 
     #[test]
@@ -436,61 +474,87 @@ mod tests {
         let msg = "c20wSnp6Z1o1U2MyWDVjU3BPeWNNQT09LS1JOWNyR25LdDRpZUUvcmoxVTdoSTNRPT0=--a79c9522355e55bf8e4302c66d8bf5638f1a50ec";
 
         let dkp = DerivedKeyParams::default();
-        let encryptor = AesHmacEncryptor::new( "helloworld", "test salt", "test signed salt", dkp).unwrap();
+        let encryptor =
+            AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
 
-        assert_eq!(encryptor.decrypt_and_verify(msg).unwrap(), "{\"key\":\"value\"}".as_bytes());
+        assert_eq!(
+            encryptor.decrypt_and_verify(msg).unwrap(),
+            "{\"key\":\"value\"}".as_bytes()
+        );
     }
 
     #[test]
-    fn aes_hamc_decrypt_and_verify_returns_invalid_signature_error_for_wrong_key(){
+    fn aes_hamc_decrypt_and_verify_returns_invalid_signature_error_for_wrong_key() {
         let msg = "SnRXQXFhOE9WSGg2QmVGUDdHdkhNZz09LS1vcjFWcm53VU40YmV0SVcwdWFlK2NRPT0=--c879b51cbd92559d4d684c406b3aaebfbc958e9d";
 
         let dkp = DerivedKeyParams::default();
-        let encryptor = AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
+        let encryptor =
+            AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
 
-        assert_error_kind!(encryptor.decrypt_and_verify(msg).unwrap_err(), ErrorKind::InvalidSignature);
+        assert_error_kind!(
+            encryptor.decrypt_and_verify(msg).unwrap_err(),
+            ErrorKind::InvalidSignature
+        );
     }
 
     #[test]
-    fn aes_hamc_decrypt_and_verify_returns_invalid_message_for_empty_message(){
+    fn aes_hamc_decrypt_and_verify_returns_invalid_message_for_empty_message() {
         let msg = "";
 
         let dkp = DerivedKeyParams::default();
-        let encryptor = AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
+        let encryptor =
+            AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
 
-        assert_error_kind!(encryptor.decrypt_and_verify(msg).unwrap_err(), ErrorKind::InvalidMessage);
+        assert_error_kind!(
+            encryptor.decrypt_and_verify(msg).unwrap_err(),
+            ErrorKind::InvalidMessage
+        );
     }
 
     #[test]
-    fn aes_hamc_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string(){
+    fn aes_hamc_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string() {
         let dkp = DerivedKeyParams::default();
-        let encryptor = AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
+        let encryptor =
+            AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
 
         let message = encryptor.encrypt_and_sign("{\"key\":\"value\"}").unwrap();
 
-        assert_eq!(encryptor.decrypt_and_verify(&message).unwrap(), "{\"key\":\"value\"}".as_bytes());
+        assert_eq!(
+            encryptor.decrypt_and_verify(&message).unwrap(),
+            "{\"key\":\"value\"}".as_bytes()
+        );
     }
 
     #[test]
-    fn aes_hamc_decrypt_and_verify_returns_decoded_message_with_non_default_cipher_for_valid_messages() {
+    fn aes_hamc_decrypt_and_verify_returns_decoded_message_with_non_default_cipher_for_valid_messages(
+    ) {
         let msg = "RXFQajB4VzR3QytRQ0NpQXlGUFFTdz09LS0ycUZlcWFXNlRsb1phanMvcHlwVCtRPT0=--5d4739f859e1f730dc0ae7abfb21160c9f00dae6";
 
         let dkp = DerivedKeyParams::default();
-        let mut encryptor = AesHmacEncryptor::new( "helloworld", "test salt", "test signed salt", dkp).unwrap();
+        let mut encryptor =
+            AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
         encryptor.key_size = KeySize::Aes192;
 
-        assert_eq!(encryptor.decrypt_and_verify(msg).unwrap(), "{\"key\":\"value\"}".as_bytes());
+        assert_eq!(
+            encryptor.decrypt_and_verify(msg).unwrap(),
+            "{\"key\":\"value\"}".as_bytes()
+        );
     }
 
     #[test]
-    fn aes_hamc_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string_with_non_default_cipher(){
+    fn aes_hamc_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string_with_non_default_cipher(
+    ) {
         let dkp = DerivedKeyParams::default();
-        let mut encryptor = AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
+        let mut encryptor =
+            AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
         encryptor.key_size = KeySize::Aes192;
 
         let message = encryptor.encrypt_and_sign("{\"key\":\"value\"}").unwrap();
 
-        assert_eq!(encryptor.decrypt_and_verify(&message).unwrap(), "{\"key\":\"value\"}".as_bytes());
+        assert_eq!(
+            encryptor.decrypt_and_verify(&message).unwrap(),
+            "{\"key\":\"value\"}".as_bytes()
+        );
     }
 
     #[test]
@@ -498,38 +562,50 @@ mod tests {
         let msg = "H9msESjs5e8I6utXGnk0--4UI1B/xoA1MIR3A3--DHpzaZ7LMhFsWXzEbLiOCA==";
 
         let dkp = DerivedKeyParams::default();
-        let encryptor = AesGcmEncryptor::new( "helloworld", "test salt", dkp).unwrap();
+        let encryptor = AesGcmEncryptor::new("helloworld", "test salt", dkp).unwrap();
 
-        assert_eq!(encryptor.decrypt_and_verify(msg).unwrap(), "{\"key\":\"value\"}".as_bytes());
+        assert_eq!(
+            encryptor.decrypt_and_verify(msg).unwrap(),
+            "{\"key\":\"value\"}".as_bytes()
+        );
     }
 
     #[test]
-    fn aes_gcm_decrypt_and_verify_returns_invalid_message_error_for_wrong_key(){
+    fn aes_gcm_decrypt_and_verify_returns_invalid_message_error_for_wrong_key() {
         let msg = "Rhlx3KvutaC3AU1gi7pg--5T4OYITxIw56qdfL--pcc0hZjYYP/5xgTRYFqnkA==";
 
         let dkp = DerivedKeyParams::default();
         let encryptor = AesGcmEncryptor::new("helloworld", "test salt", dkp).unwrap();
 
-        assert_error_kind!(encryptor.decrypt_and_verify(msg).unwrap_err(), ErrorKind::InvalidMessage);
+        assert_error_kind!(
+            encryptor.decrypt_and_verify(msg).unwrap_err(),
+            ErrorKind::InvalidMessage
+        );
     }
 
     #[test]
-    fn aes_gcm_decrypt_and_verify_returns_invalid_message_for_empty_message(){
+    fn aes_gcm_decrypt_and_verify_returns_invalid_message_for_empty_message() {
         let msg = "";
 
         let dkp = DerivedKeyParams::default();
         let encryptor = AesGcmEncryptor::new("helloworld", "test signed salt", dkp).unwrap();
 
-        assert_error_kind!(encryptor.decrypt_and_verify(msg).unwrap_err(), ErrorKind::InvalidMessage);
+        assert_error_kind!(
+            encryptor.decrypt_and_verify(msg).unwrap_err(),
+            ErrorKind::InvalidMessage
+        );
     }
 
     #[test]
-    fn aes_gcm_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string(){
+    fn aes_gcm_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string() {
         let dkp = DerivedKeyParams::default();
         let encryptor = AesGcmEncryptor::new("helloworld", "test salt", dkp).unwrap();
 
         let message = encryptor.encrypt_and_sign("{\"key\":\"value\"}").unwrap();
 
-        assert_eq!(encryptor.decrypt_and_verify(&message).unwrap(), "{\"key\":\"value\"}".as_bytes());
+        assert_eq!(
+            encryptor.decrypt_and_verify(&message).unwrap(),
+            "{\"key\":\"value\"}".as_bytes()
+        );
     }
 }

@@ -1,6 +1,6 @@
 extern crate message_verifier;
 
-use message_verifier::{Verifier, Encryptor, AesHmacEncryptor, DerivedKeyParams};
+use message_verifier::{AesHmacEncryptor, DerivedKeyParams, Encryptor, Verifier};
 
 fn main() {
     let key_base = "helloworld";
@@ -15,5 +15,10 @@ fn main() {
     let message = "{\"key\":\"value\"}";
 
     println!("{}", verifier.generate(message).expect("Verifier failed"));
-    println!("{}", encryptor.encrypt_and_sign(message).expect("Encryptor failed"));
+    println!(
+        "{}",
+        encryptor
+            .encrypt_and_sign(message)
+            .expect("Encryptor failed")
+    );
 }
