@@ -14,6 +14,6 @@ fn main() {
 
     let message = "{\"key\":\"value\"}";
 
-    println!("{}", verifier.generate(message));
+    println!("{}", verifier.generate(message).expect("Verifier failed"));
     println!("{}", encryptor.encrypt_and_sign(message).expect("Encryptor failed"));
 }

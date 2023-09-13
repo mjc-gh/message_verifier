@@ -10,8 +10,15 @@ authors = ["Michael J Coyne <mikeycgto@gmail.com>"]
 keywords = ["crypto", "security", "rails", "cookies", "sessions"]
 
 [dependencies]
+aes = "0.8.3"
+aes-gcm = "0.10.2"
 base64 = "0.21.4"
+block-padding = "0.3.3"
+cbc = { version = "0.1.2", features = ["alloc"] }
 error-chain = "0.12.4"
 hex = "0.4.3"
-rust-crypto = "0.2.36" # TODO: replace with actively maintained crate
+pbkdf2 = "0.12.2"
 rand = "0.8.5"
+sha1 = "0.10.5"
+subtle = "2.5.0"
+digest = "0.10.7"
