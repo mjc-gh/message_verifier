@@ -1,6 +1,6 @@
 on: [push, pull_request]
 
-name: rev-lines
+name: message_verifier
 
 jobs:
   check:
