@@ -36,8 +36,8 @@ fn main() {
         _ => panic!("Missing input"),
     };
 
-    match verifier.verify(&msg1) {
-        Ok(verified_result) => match encryptor.decrypt_and_verify(&msg2) {
+    match verifier.verify(msg1) {
+        Ok(verified_result) => match encryptor.decrypt_and_verify(msg2) {
             Ok(ref decrypted_result) => {
                 println!(
                     "Verified Message: {}",
@@ -45,7 +45,7 @@ fn main() {
                 );
                 println!(
                     "Decrypted Message: {}",
-                    str::from_utf8(&decrypted_result).expect("Encryptor failed")
+                    str::from_utf8(decrypted_result).expect("Encryptor failed")
                 );
             }
 
