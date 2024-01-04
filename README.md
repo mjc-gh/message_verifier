@@ -1,6 +1,6 @@
-# message_verifier 
+# message_verifier
 
-[![rev-lines](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml/badge.svg)](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml)
+[![message_verifier](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml/badge.svg)](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml)
 ![Crates.io Version](https://img.shields.io/crates/v/message_verifier)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
