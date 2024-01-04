@@ -1,6 +1,6 @@
 extern crate message_verifier;
 
-use message_verifier::{Verifier, Encryptor, AesHmacEncryptor, DerivedKeyParams};
+use message_verifier::{AesHmacEncryptor, DerivedKeyParams, Encryptor, Verifier};
 
 use std::io;
 use std::str;
@@ -26,28 +26,32 @@ fn main() {
                 buffer.clear();
             }
 
-            Err(_) => panic!("Read failed")
+            Err(_) => panic!("Read failed"),
         }
     }
 
     let (msg1, msg2) = match (input.first(), input.last()) {
         (Some(m1), Some(m2)) => (m1, m2),
 
-        _ => panic!("Missing input")
+        _ => panic!("Missing input"),
     };
 
     match verifier.verify(&msg1) {
-        Ok(verified_result) => {
-            match encryptor.decrypt_and_verify(&msg2) {
-                Ok(ref decrypted_result) => {
-                    println!("Verified Message: {}", str::from_utf8(&verified_result).expect("Verifier failed"));
-                    println!("Decrypted Message: {}", str::from_utf8(&decrypted_result).expect("Encryptor failed"));
-                }
-
-                Err(e) => panic!("Encryptor Error: {:?}", e)
+        Ok(verified_result) => match encryptor.decrypt_and_verify(&msg2) {
+            Ok(ref decrypted_result) => {
+                println!(
+                    "Verified Message: {}",
+                    str::from_utf8(&verified_result).expect("Verifier failed")
+                );
+                println!(
+                    "Decrypted Message: {}",
+                    str::from_utf8(&decrypted_result).expect("Encryptor failed")
+                );
             }
-        }
 
-        Err(e) => panic!("Verifier Error: {:?}", e)
+            Err(e) => panic!("Encryptor Error: {:?}", e),
+        },
+
+        Err(e) => panic!("Verifier Error: {:?}", e),
     }
 }
