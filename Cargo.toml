@@ -1,6 +1,6 @@
 [package]
 name = "message_verifier"
-version = "1.1.0"
+version = "2.0.0"
 edition = "2021"
 description = "Rust Message Verifier library compatible with Rails' MessageVerifier and MessageEncryptor"
 repository = "https://github.com/mikeycgto/message_verifier"
