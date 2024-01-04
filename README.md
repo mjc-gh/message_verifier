@@ -1,7 +1,7 @@
 # message_verifier 
 
-[![Travis Build Status](https://travis-ci.org/mikeycgto/message_verifier.svg)](https://travis-ci.org/mikeycgto/message_verifier)
-[![crates.io](https://meritbadge.herokuapp.com/message_verifier)](https://crates.io/crates/message_verifier)
+[![rev-lines](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml/badge.svg)](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml)
+![Crates.io Version](https://img.shields.io/crates/v/message_verifier)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 Message Verifier library compatible with Rails' [MessageVerifier](
@@ -67,3 +67,8 @@ Decrypted Message: {"key":"value"}
   - 256, 192, or 128 bit keys
 
 If you need more cipher options, please open an issue or submit a PR!
+
+## Contributors
+
+- [mjc-gh](https://github.com/mjc-gh/)
+- [seanlinsley](https://github.com/seanlinsley)
