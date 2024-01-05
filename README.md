@@ -1,8 +1,8 @@
 # message_verifier
 
-[![rev-lines](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml/badge.svg)](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml)
-![Crates.io Version](https://img.shields.io/crates/v/message_verifier)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![message_verifier](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml/badge.svg)](https://github.com/mjc-gh/message_verifier/actions/workflows/actions.yml)
+[![Crates.io Version](https://img.shields.io/crates/v/message_verifier)](https://crates.io/crates/message_verifier)
+[![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE.md)
 
 Message Verifier library compatible with Rails' [MessageVerifier](
 http://api.rubyonrails.org/classes/ActiveSupport/MessageVerifier.html)
