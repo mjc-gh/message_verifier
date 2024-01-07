@@ -3,7 +3,7 @@
 - Dependency updates from
   [@seanlinsley](https://github.com/seanlinsley). This package now uses
   more modern cryptographic crates from the
-  [@RustCrypto](https://github.com/RustCrypto).
+  [@RustCrypto](https://github.com/RustCrypto) team.
   - The `set_cipher_key_size` function was removed, instead just set the
     encryptor's `key_size` property directly:
     `e.key_size = KeySize::Aes256`
