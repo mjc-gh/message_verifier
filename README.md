@@ -24,7 +24,32 @@ layer.
 
 Documentation is available on [Docs.rs](https://docs.rs/message_verifier).
 
-### Examples
+
+### A Small Example
+
+```
+ extern crate message_verifier;
+
+ use message_verifier::{Verifier, Encryptor, AesHmacEncryptor, DerivedKeyParams};
+
+ fn main() {
+     let key_base = "helloworld";
+     let salt = "test salt";
+     let sign_salt = "test signed salt";
+
+     let verifier = Verifier::new(key_base);
+
+     //let dkp = DerivedKeyParams::default();
+     //let encryptor = AesHmacEncryptor::new(key_base, salt, sign_salt, dkp).unwrap();
+
+     let message = "{\"key\":\"value\"}";
+
+     println!("{}", verifier.generate(message).expect("Verifier failed"));
+     //println!("{}", encryptor.encrypt_and_sign(message).expect("Encryptor failed"));
+ }
+```
+
+### More Examples
 
 The examples directory contains two Rust examples as well as two small
 Ruby scripts to demonstrate interoperability between this library and
@@ -32,7 +57,7 @@ ActiveSupport.
 
 One Rust example demonstrates message signing and encryption:
 
-```
+```sh
 $ cargo run --example generate_encrypt
 eyJrZXkiOiJ2YWx1ZSJ9--fa115453dbb4a28277b1ba07ef4c7437621f5d72
 MllIRUYvUFhjcXBpRk9NUWgvZ2s2UT09LS1NRmN2b2Y5SWJsaUpRNlptZFdwSlZRPT0=--2df97d947a5dc344de003715510002503fa059f1
@@ -41,7 +66,7 @@ MllIRUYvUFhjcXBpRk9NUWgvZ2s2UT09LS1NRmN2b2Y5SWJsaUpRNlptZFdwSlZRPT0=--2df97d947a
 The second reads from stdin and tries verify the first line of input and
 decrypt and verify the second:
 
-```
+```sh
 $ cargo run --example generate_encrypt | cargo run --example verify_decrypt
 Verified Message: {"key":"value"}
 Decrypted Message: {"key":"value"}
@@ -49,7 +74,7 @@ Decrypted Message: {"key":"value"}
 
 We can use these two Rust examples with the Ruby scripts as well:
 
-```
+```sh
 $ cargo run --example generate_encrypt | ruby examples/verify_decrypt.rb
 Verified message: {"key"=>"value"}
 Decrypted message: {"key"=>"value"}
@@ -72,3 +97,4 @@ If you need more cipher options, please open an issue or submit a PR!
 
 - [mjc-gh](https://github.com/mjc-gh/)
 - [seanlinsley](https://github.com/seanlinsley)
+- [endoze](https://github.com/endoze)
