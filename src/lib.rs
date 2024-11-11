@@ -1,34 +1,5 @@
-//! Message Verifier library compatible with Rails'
-//! [MessageVerifier](http://api.rubyonrails.org/classes/ActiveSupport/MessageVerifier.html) and
-//! [MessageEncryptor](http://api.rubyonrails.org/classes/ActiveSupport/MessageEncryptor.html).
 //!
-//! #### A Small Example
-//!
-//! Please refer to the
-//! [README](https://github.com/mikeycgto/message_verifier/blob/master/README.md)
-//! and [repo](https://github.com/mikeycgto/message_verifier) for more examples.
-//!
-//! ```
-//!  extern crate message_verifier;
-//!
-//!  use message_verifier::{Verifier, Encryptor, AesHmacEncryptor, DerivedKeyParams};
-//!
-//!  fn main() {
-//!      let key_base = "helloworld";
-//!      let salt = "test salt";
-//!      let sign_salt = "test signed salt";
-//!
-//!      let verifier = Verifier::new(key_base);
-//!
-//!      //let dkp = DerivedKeyParams::default();
-//!      //let encryptor = AesHmacEncryptor::new(key_base, salt, sign_salt, dkp).unwrap();
-//!
-//!      let message = "{\"key\":\"value\"}";
-//!
-//!      println!("{}", verifier.generate(message).expect("Verifier failed"));
-//!      //println!("{}", encryptor.encrypt_and_sign(message).expect("Encryptor failed"));
-//!  }
-//! ```
+#![doc = include_str!("../README.md")]
 
 #[macro_use]
 extern crate error_chain;
@@ -470,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn aes_hamc_decrypt_and_verify_returns_decoded_message_for_valid_messages() {
+    fn aes_hmac_decrypt_and_verify_returns_decoded_message_for_valid_messages() {
         let msg = "c20wSnp6Z1o1U2MyWDVjU3BPeWNNQT09LS1JOWNyR25LdDRpZUUvcmoxVTdoSTNRPT0=--a79c9522355e55bf8e4302c66d8bf5638f1a50ec";
 
         let dkp = DerivedKeyParams::default();
@@ -484,7 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn aes_hamc_decrypt_and_verify_returns_invalid_signature_error_for_wrong_key() {
+    fn aes_hmac_decrypt_and_verify_returns_invalid_signature_error_for_wrong_key() {
         let msg = "SnRXQXFhOE9WSGg2QmVGUDdHdkhNZz09LS1vcjFWcm53VU40YmV0SVcwdWFlK2NRPT0=--c879b51cbd92559d4d684c406b3aaebfbc958e9d";
 
         let dkp = DerivedKeyParams::default();
@@ -498,7 +469,7 @@ mod tests {
     }
 
     #[test]
-    fn aes_hamc_decrypt_and_verify_returns_invalid_message_for_empty_message() {
+    fn aes_hmac_decrypt_and_verify_returns_invalid_message_for_empty_message() {
         let msg = "";
 
         let dkp = DerivedKeyParams::default();
@@ -512,7 +483,7 @@ mod tests {
     }
 
     #[test]
-    fn aes_hamc_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string() {
+    fn aes_hmac_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string() {
         let dkp = DerivedKeyParams::default();
         let encryptor =
             AesHmacEncryptor::new("helloworld", "test salt", "test signed salt", dkp).unwrap();
@@ -526,7 +497,7 @@ mod tests {
     }
 
     #[test]
-    fn aes_hamc_decrypt_and_verify_returns_decoded_message_with_non_default_cipher_for_valid_messages(
+    fn aes_hmac_decrypt_and_verify_returns_decoded_message_with_non_default_cipher_for_valid_messages(
     ) {
         let msg = "RXFQajB4VzR3QytRQ0NpQXlGUFFTdz09LS0ycUZlcWFXNlRsb1phanMvcHlwVCtRPT0=--5d4739f859e1f730dc0ae7abfb21160c9f00dae6";
 
@@ -542,7 +513,7 @@ mod tests {
     }
 
     #[test]
-    fn aes_hamc_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string_with_non_default_cipher(
+    fn aes_hmac_encrypt_and_sign_returns_encrypted_and_signed_decryptable_and_verifiable_string_with_non_default_cipher(
     ) {
         let dkp = DerivedKeyParams::default();
         let mut encryptor =
