@@ -1,57 +1,25 @@
-extern crate message_verifier;
+use std::io::{self, Read};
 
-use message_verifier::{AesHmacEncryptor, DerivedKeyParams, Encryptor, Verifier};
+use message_verifier::{Cipher, Encryptor, KeyGenerator, Verifier};
 
-use std::io;
-use std::str;
-
-fn main() {
-    let key_base = "helloworld";
-    let salt = "test salt";
-    let sign_salt = "test signed salt";
-
-    let verifier = Verifier::new(key_base);
-
-    let dkp = DerivedKeyParams::default();
-    let encryptor = AesHmacEncryptor::new(key_base, salt, sign_salt, dkp).unwrap();
-
-    let mut input: Vec<String> = vec![];
-    let mut buffer = String::new();
-
-    for _ in 0..2 {
-        match io::stdin().read_line(&mut buffer) {
-            Ok(_) => {
-                input.push(buffer.clone());
-
-                buffer.clear();
-            }
-
-            Err(_) => panic!("Read failed"),
-        }
-    }
-
-    let (msg1, msg2) = match (input.first(), input.last()) {
-        (Some(m1), Some(m2)) => (m1, m2),
-
-        _ => panic!("Missing input"),
-    };
-
-    match verifier.verify(msg1) {
-        Ok(verified_result) => match encryptor.decrypt_and_verify(msg2) {
-            Ok(ref decrypted_result) => {
-                println!(
-                    "Verified Message: {}",
-                    str::from_utf8(&verified_result).expect("Verifier failed")
-                );
-                println!(
-                    "Decrypted Message: {}",
-                    str::from_utf8(decrypted_result).expect("Encryptor failed")
-                );
-            }
-
-            Err(e) => panic!("Encryptor Error: {:?}", e),
-        },
-
-        Err(e) => panic!("Verifier Error: {:?}", e),
-    }
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let generator = KeyGenerator::new("helloworld").iterations(1000);
+    let encryptor = Encryptor::builder(generator.generate_key("test salt", 32)?)
+        .cipher(Cipher::Aes256Cbc)
+        .signing_key(generator.generate_key("test signed salt", 64)?)
+        .build()?;
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input)?;
+    let mut lines = input.lines();
+    let signed = lines.next().ok_or("missing signed message")?;
+    let encrypted = lines.next().ok_or("missing encrypted message")?;
+    println!(
+        "Verified Message: {}",
+        String::from_utf8(Verifier::new("helloworld").verify(signed)?)?
+    );
+    println!(
+        "Decrypted Message: {}",
+        String::from_utf8(encryptor.decrypt_and_verify(encrypted)?)?
+    );
+    Ok(())
 }

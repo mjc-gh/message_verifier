@@ -1,31 +1,17 @@
-extern crate message_verifier;
+use std::io::{self, Read};
 
-use message_verifier::{AesGcmEncryptor, DerivedKeyParams, Encryptor};
+use message_verifier::{Encryptor, KeyGenerator};
 
-use std::io;
-use std::io::Read;
-use std::str;
-
-fn main() {
-    let key_base = "helloworld";
-    let salt = "test salt";
-
-    let dkp = DerivedKeyParams::default();
-    let encryptor = AesGcmEncryptor::new(key_base, salt, dkp).unwrap();
-
-    let mut message = String::new();
-
-    match io::stdin().read_to_string(&mut message) {
-        Err(_) => panic!("Read failed"),
-        Ok(_) => match encryptor.decrypt_and_verify(message.trim()) {
-            Ok(ref decrypted_result) => {
-                println!(
-                    "Decrypted Message: {}",
-                    str::from_utf8(decrypted_result).expect("Encryptor failed")
-                );
-            }
-
-            Err(e) => panic!("Encryptor Error: {:?}", e),
-        },
-    }
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let key = KeyGenerator::new("helloworld")
+        .iterations(1000)
+        .generate_key("test salt", 32)?;
+    let encryptor = Encryptor::new(key)?;
+    let mut token = String::new();
+    io::stdin().read_to_string(&mut token)?;
+    println!(
+        "Decrypted Message: {}",
+        String::from_utf8(encryptor.decrypt_and_verify(token.trim())?)?
+    );
+    Ok(())
 }

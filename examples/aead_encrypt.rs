@@ -1,20 +1,10 @@
-extern crate message_verifier;
+use message_verifier::{Encryptor, KeyGenerator};
 
-use message_verifier::{AesGcmEncryptor, DerivedKeyParams, Encryptor};
-
-fn main() {
-    let key_base = "helloworld";
-    let salt = "test salt";
-
-    let dkp = DerivedKeyParams::default();
-    let encryptor = AesGcmEncryptor::new(key_base, salt, dkp).unwrap();
-
-    let message = "{\"key\":\"value\"}";
-
-    println!(
-        "{}",
-        encryptor
-            .encrypt_and_sign(message)
-            .expect("Encryptor failed")
-    );
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let key = KeyGenerator::new("helloworld")
+        .iterations(1000)
+        .generate_key("test salt", 32)?;
+    let encryptor = Encryptor::new(key)?;
+    println!("{}", encryptor.encrypt_and_sign(r#"{"key":"value"}"#)?);
+    Ok(())
 }

@@ -1,24 +1,14 @@
-extern crate message_verifier;
+use message_verifier::{Cipher, Encryptor, KeyGenerator, Verifier};
 
-use message_verifier::{AesHmacEncryptor, DerivedKeyParams, Encryptor, Verifier};
-
-fn main() {
-    let key_base = "helloworld";
-    let salt = "test salt";
-    let sign_salt = "test signed salt";
-
-    let verifier = Verifier::new(key_base);
-
-    let dkp = DerivedKeyParams::default();
-    let encryptor = AesHmacEncryptor::new(key_base, salt, sign_salt, dkp).unwrap();
-
-    let message = "{\"key\":\"value\"}";
-
-    println!("{}", verifier.generate(message).expect("Verifier failed"));
-    println!(
-        "{}",
-        encryptor
-            .encrypt_and_sign(message)
-            .expect("Encryptor failed")
-    );
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Explicit legacy settings preserve interoperability with the original examples.
+    let generator = KeyGenerator::new("helloworld").iterations(1000);
+    let encryptor = Encryptor::builder(generator.generate_key("test salt", 32)?)
+        .cipher(Cipher::Aes256Cbc)
+        .signing_key(generator.generate_key("test signed salt", 64)?)
+        .build()?;
+    let message = r#"{"key":"value"}"#;
+    println!("{}", Verifier::new("helloworld").generate(message));
+    println!("{}", encryptor.encrypt_and_sign(message)?);
+    Ok(())
 }

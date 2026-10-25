@@ -1,7 +1,8 @@
 [package]
 name = "message_verifier"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2021"
+rust-version = "1.89"
 description = "Rust Message Verifier library compatible with Rails' MessageVerifier and MessageEncryptor"
 repository = "https://github.com/mikeycgto/message_verifier"
 documentation = "https://docs.rs/message_verifier"
@@ -10,14 +11,16 @@ authors = ["Michael J Coyne <mjc@hey.com>", "Sean Linsley <code@seanlinsley.com>
 keywords = ["crypto", "security", "rails", "cookies", "sessions"]
 
 [dependencies]
-aes = "0.8.3"
-aes-gcm = "0.10.2"
-base64 = "0.21.4"
-cbc = { version = "0.1.2", features = ["alloc"] }
-error-chain = "0.12.4"
+aes = "0.9.3"
+aes-gcm = "0.11.1"
+base64 = "0.23.1"
+cbc = { version = "0.2.1", features = ["alloc"] }
+getrandom = "0.4"
 hex = "0.4.3"
-pbkdf2 = "0.12.2"
-rand = "0.8.5"
-sha1 = "0.10.5"
-subtle = "2.5.0"
-digest = "0.10.7"
+pbkdf2 = "0.13.0"
+sha1 = "0.11.0"
+sha2 = "0.11.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+thiserror = "2.0"
+time = { version = "0.3.55", features = ["formatting", "parsing"] }

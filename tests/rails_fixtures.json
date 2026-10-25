@@ -1,0 +1,22 @@
+{
+  "source": "ActiveSupport 8.1.4, JSON serializer, 32 zero key bytes, purpose fixture, expires_at 2030-01-01T00:00:00.123Z",
+  "value": {"id": 42, "text": "café 🐈"},
+  "tokens": [
+    {
+      "kind": "verifier", "digest": "SHA256", "url_safe": true, "legacy": false,
+      "token": "eyJfcmFpbHMiOnsiZGF0YSI6eyJpZCI6NDIsInRleHQiOiJjYWbDqSDwn5CIIn0sImV4cCI6IjIwMzAtMDEtMDFUMDA6MDA6MDAuMTIzWiIsInB1ciI6ImZpeHR1cmUifX0--c9d9555784c0da68faac538e2b8f810ba848565a5aee0fc01e583d8838194038"
+    },
+    {
+      "kind": "verifier", "digest": "SHA512", "url_safe": false, "legacy": true,
+      "token": "eyJfcmFpbHMiOnsibWVzc2FnZSI6ImV5SnBaQ0k2TkRJc0luUmxlSFFpT2lKallXYkRxU0R3bjVDSUluMD0iLCJleHAiOiIyMDMwLTAxLTAxVDAwOjAwOjAwLjEyM1oiLCJwdXIiOiJmaXh0dXJlIn19--4867188f98a87da82db5b0cab691bb0f668e73aded9f9323b26cf2c741b24a29e5e958ac46be90a4345745ae62049696e22ca38347712c623f42081386cdff01"
+    },
+    {
+      "kind": "encryptor", "cipher": "aes-256-gcm", "digest": "SHA1", "url_safe": true, "legacy": false,
+      "token": "WcigeLaDuBv4LPYmJcsYD82B4fDjeCGB4ysoiPAjP3mEeeUn8tI17TYcqZG_FzKQzCrYJF8eIc_o3z5Mn9QMXeF3-Tc7VAAsK9usZ19A750_2uPNFGeZ5DK3PTQZZIdpK8Y--QOZgTHN-Uw5DuzUx--tFg3gyuW9go3sXkQkcLzSw"
+    },
+    {
+      "kind": "encryptor", "cipher": "aes-256-cbc", "digest": "SHA256", "url_safe": true, "legacy": true,
+      "token": "YmxyeTNhbHpPQkdQZk4yalNMNUx2cHozY0VCN2J1QjdmcWIzaGV1dXhJdjdVcWU3X05iVnI5SnU3OUxENFVWR3ZTZnlfSk5oNkl6YkFpUHNvYjI5ckRVOTMyZmVfd1UtdWFVMHZibW4yQlRDdnBkXzR3M3BkUHgxbDNBNHJMUXFSZ1d5d1packhGN1liZUZQLURmaG9IcEhjR3JTWDdLdmxqYW1aeGxaaGpNLS1iQlQzM08wQ2Vfd2ttenRlOEZvU3J3--eb261d9776f73bd2245b83cbaa52eecdc0792abc1a09801a92a6c228235f0027"
+    }
+  ]
+}
